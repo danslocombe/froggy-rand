@@ -7,6 +7,8 @@ license = "MIT"
 readme = "README.md"
 keywords = [ "rng", "rand", "gamedev", "games", "game", "hash", "hashing" ]
 categories = [ "algorithms" ]
+homepage = "https://github.com/danslocombe/froggy-rand"
+repository = "https://github.com/danslocombe/froggy-rand"
 edition = "2018"
 
 [dependencies]
