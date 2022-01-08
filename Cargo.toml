@@ -1,11 +1,11 @@
 [package]
-name = "froggy-rng"
+name = "froggy-rand"
 version = "0.1.0"
 authors = ["Dan Slocombe"]
-description = "Random generation for games"
+description = "Random number generation for games without state"
 license = "MIT"
 readme = "README.md"
-keywords = [ "rng", "rand", "gamedev", "games", "game" ]
+keywords = [ "rng", "rand", "gamedev", "games", "game", "hash", "hashing" ]
 categories = [ "algorithms" ]
 edition = "2018"
 
