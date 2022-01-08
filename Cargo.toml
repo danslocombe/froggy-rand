@@ -1,0 +1,14 @@
+[package]
+name = "froggy-rng"
+version = "0.1.0"
+authors = ["Dan Slocombe"]
+description = "Random generation for games"
+license = "MIT"
+readme = "README.md"
+keywords = [ "rng", "rand", "gamedev", "games", "game" ]
+categories = [ "algorithms" ]
+edition = "2018"
+
+[dependencies]
+deterministic-hash = "1.0.1"
+hashers = "1.0.1"
