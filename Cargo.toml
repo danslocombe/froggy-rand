@@ -1,8 +1,8 @@
 [package]
 name = "froggy-rand"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Dan Slocombe"]
-description = "Random number generation for games without state"
+description = "Random number generation without state for games"
 license = "MIT"
 readme = "README.md"
 keywords = [ "rng", "rand", "gamedev", "game", "hash", ]

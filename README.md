@@ -1,4 +1,4 @@
-Random number generation for games without state.
+Random number generation without state for games.
 
 One way of thinking about a pseudorandom number generator (RNG) is as a list of numbers defined by an initial seed.
 Every time we generate a random number we increment the index into this list. 

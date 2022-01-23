@@ -1,4 +1,4 @@
-//! Random number generation for games without state.
+//! Random number generation without state for games.
 //!
 //! One way of thinking about a pseudorandom number generator (RNG) is as a list of numbers defined by an initial seed.
 //! Every time we generate a random number we increment the index into this list. 
@@ -71,9 +71,11 @@
 //! 
 //! For a more detailed explanation see
 //! [this talk.](https://www.youtube.com/watch?v=e4b--cyXEsM)
-/// 
-use std::hash::{Hash, Hasher};
-use std::num::Wrapping;
+
+#![no_std]
+
+use core::hash::{Hash, Hasher};
+use core::num::Wrapping;
 
 #[derive(Debug, Copy, Clone)]
 pub struct FroggyRand {
@@ -156,5 +158,35 @@ impl FroggyRand {
             let j = self.gen_usize_range((&x, i), i, xs.len() - 1);
             xs.swap(i, j);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::*;
+
+    #[test]
+    fn different_hashes() {
+        let froggy_rand = FroggyRand::new(100);
+        let val0 = froggy_rand.gen(("test", 0));
+        let val1 = froggy_rand.gen(("test", 1));
+        let val2 = froggy_rand.gen(("test_other", 0));
+        let val3 = froggy_rand.gen(("test_other", 1));
+
+        assert_ne!(val0, val1);
+        assert_ne!(val0, val2);
+        assert_ne!(val0, val3);
+
+        assert_ne!(val1, val0);
+        assert_ne!(val1, val2);
+        assert_ne!(val1, val3);
+
+        assert_ne!(val2, val0);
+        assert_ne!(val2, val1);
+        assert_ne!(val2, val3);
+
+        assert_ne!(val3, val0);
+        assert_ne!(val3, val1);
+        assert_ne!(val3, val2);
     }
 }
