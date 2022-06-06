@@ -105,6 +105,14 @@ impl FroggyRand {
         Self::new(hash(x))
     }
 
+    pub fn subrand<T : Hash>(&self, x : T) -> Self {
+        Self::from_hash((x, self.seed))
+    }
+
+    pub fn get_seed(&self) -> u64 {
+        self.seed
+    }
+
     /// Should be uniform over all u64 values
     pub fn gen<T : Hash>(&self, x : T) -> u64 {
         let hash = hash(x);
