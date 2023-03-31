@@ -1,15 +1,19 @@
 //! Random number generation without state for games.
 //!
-//! One way of thinking about a pseudorandom number generator (RNG) is as a list of numbers defined by an initial seed.
-//! Every time we generate a random number we increment the index into this list. 
-//! Suppose you are building a rougelike game where users can share seeds. A design goal might be to keep the map generation consistent between updates.
-//! With a traditional RNG you would have to be very careful about adding additional RNG calls as doing so would affect all RNG calls made after it.
+//! One way of thinking about a stateful pseudorandom number generator (RNGs) is as a list of numbers.
+//! Each initial seed yields a different list.
+//! Every time we generate a random number we are incrementing an index into this list. 
+//! 
+//! Suppose you are building a rougelike game where users can share seeds.
+//! A design goal might be to keep the map generation consistent between updates.
+//! With a stateful RNG you would have to be very careful about adding additional RNG calls.
+//! This is because additional RNG calls will increment the index into the RNG's list, and will affect all RNG calls made after it.
 //! 
 //! This library solves this problem by removing the mutable state from the RNG.
 //! 
 //! ---
 //! 
-//! For a concrete example, suppose we are filling a level with enemies.
+//! For a concrete example, suppose we are filling a level with enemies at random positions.
 //! 
 //! ```
 //! let mut rng = ExampleRng::from_seed(seed);
@@ -21,7 +25,7 @@
 //! }
 //! ``` 
 //! 
-//! Now suppose in an update we want to add variety, so give enemies a choice of random weapons.
+//! Now in an update we want to add variety, so we give enemies a choice of random weapons.
 //! We might do that as follows:
 //! 
 //! ```
@@ -35,8 +39,9 @@
 //! }
 //! ``` 
 //! 
-//! However we have just changed the positions of all enemies past the first!
-//! One fix would be to initialize a new random number generator for the weapon type based on a seed generated from the initial, but this gets messy.
+//! We load up the game with a known seed however the positions of all the enemies change!
+//! What has happened is the additional rng calls have shifted all of the subsequent position generations.
+//! One fix would be to initialize a new random number generator for the weapon type based on a seed generated from the initial, but this gets messy if we need a generator per property.
 //! 
 //! ---
 //!
@@ -47,9 +52,9 @@
 //! { ... }
 //! ```
 //! 
-//! But this would require the user to explicitly keep track of the index somewhere.
-//! `FroggyRand` uses a two stage approach, first it generates a hash value from its input argument.
-//! Then it combines that with its seed to generate and index.
+//! This would require the user to explicitly keep track of the index somewhere.
+//! `FroggyRand` makes one more jump after this.
+//! First it generates a hash value from its input argument, then it combines that with its seed to generate  an index into an RNG list.
 //! 
 //! Here is how we would use `FroggyRand` with the example above:
 //! 
@@ -58,8 +63,8 @@
 //! let mut enemies = vec![];
 //! for id in 0..100 {
 //!   // We want the x position to be based on two things:
-//!   //   The hash of the string "enemy_x" to make sure its different to the y value
 //!   //   The enemy id
+//!   //   The hash of the string "enemy_x" to make sure its different to the y value
 //!   let x = froggy_rand.gen(("enemy_x", id));
 //!   let y = froggy_rand.gen(("enemy_y", id));
 //!   let weapon_type = froggy_rand.gen(("weapon_type", id));
@@ -116,7 +121,7 @@ impl FroggyRand {
     /// Should be uniform over all u64 values
     pub fn gen<T : Hash>(&self, x : T) -> u64 {
         let hash = hash(x);
-        let index = (Wrapping(self.seed) + Wrapping(hash)).0;
+        let index = self.seed.wrapping_add(hash);
         split_mix_64(index)
     }
 
@@ -167,11 +172,24 @@ impl FroggyRand {
             xs.swap(i, j);
         }
     }
+
+    /// Should be uniform in [0, 255]
+    pub fn gen_byte<T : Hash>(&self, x : T) -> u8 {
+        (self.gen(x) % 255) as u8
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::*;
+
+    #[test]
+    fn same_hashes() {
+        let froggy_rand = FroggyRand::new(100);
+        let val0 = froggy_rand.gen(("test", 0));
+        let val1 = froggy_rand.gen(("test", 0));
+        assert_eq!(val0, val1);
+    }
 
     #[test]
     fn different_hashes() {
