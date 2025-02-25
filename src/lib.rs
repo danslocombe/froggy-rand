@@ -86,7 +86,7 @@ mod hasher;
 
 #[derive(Debug, Copy, Clone)]
 pub struct FroggyRand {
-    seed : u64,
+    pub seed : u64,
 }
 
 fn split_mix_64(index : u64) -> u64 {
@@ -104,23 +104,23 @@ fn hash<T : Hash>(x : T) -> u64 {
 }
 
 impl FroggyRand {
+    #[inline]
     pub fn new(seed : u64) -> Self {
         Self {seed}
     }
 
+    #[inline]
     pub fn from_hash<T : Hash>(x : T) -> Self {
         Self::new(hash(x))
     }
 
+    #[inline]
     pub fn subrand<T : Hash>(&self, x : T) -> Self {
         Self::from_hash((x, self.seed))
     }
 
-    pub fn get_seed(&self) -> u64 {
-        self.seed
-    }
-
     /// Should be uniform over all u64 values
+    #[inline]
     pub fn gen<T : Hash>(&self, x : T) -> u64 {
         let hash = hash(x);
         let index = self.seed.wrapping_add(hash);
@@ -128,17 +128,20 @@ impl FroggyRand {
     }
 
     /// Should be uniform in [0, 1]
+    #[inline]
     pub fn gen_unit<T : Hash>(&self, x : T) -> f32 {
         // Should be enough precision for a game
         (self.gen(x) % 1_000_000) as f32 / 1_000_000.0
     }
 
     /// Should be uniform in [min, max]
+    #[inline]
     pub fn gen_range<T : Hash>(&self, x : T, min : f32, max : f32) -> f32 {
         min + self.gen_unit(x) * (max - min)
     }
 
     /// Should give a uniform random element of the slice choices. 
+    #[inline]
     pub fn choose<'a, T : Hash, X>(&self, x : T, choices : &'a [X]) -> &'a X {
         // usize can be aliased to u32 or u64 in wasm based on the compilation
         // for safety we restrict to u32 range.
@@ -149,6 +152,7 @@ impl FroggyRand {
 
     /// I dont know what a statistic is
     /// Approx normal dist https://en.wikipedia.org/wiki/Irwin%E2%80%93Hall_distribution
+    #[inline]
     pub fn gen_froggy<T : Hash>(&self, x : T, min : f32, max : f32, n : u32) -> f32 {
         let mut sum = 0.;
         let gen_min = min / n as f32;
@@ -161,11 +165,13 @@ impl FroggyRand {
         sum
     }
 
+    #[inline]
     pub fn gen_usize_range<T : Hash>(&self, x : T, min : usize, max : usize) -> usize {
         let range = 1 + max - min;
         min + ((self.gen(x) as usize) % range)
     }
 
+    #[inline]
     pub fn shuffle<T : Hash, X>(&self, x : T, xs : &mut [X]) {
         // Fisher-yates
         // See https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle#The_modern_algorithm
@@ -176,15 +182,18 @@ impl FroggyRand {
     }
 
     /// Should be uniform in [0, 255]
+    #[inline]
     pub fn gen_byte<T : Hash>(&self, x : T) -> u8 {
         (self.gen(x) % 255) as u8
     }
 
+    #[inline]
     pub fn gen_perf(&self, seed: i32) -> u64 {
         let index = (Wrapping(self.seed) + Wrapping(seed as u64)).0;
         split_mix_64(index)
     }
 
+    #[inline]
     pub fn gen_unit_perf(&self, seed: i32) -> f32 {
         (self.gen_perf(seed) % 1_000_000) as f32 / 1_000_000.0
     }

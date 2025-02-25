@@ -72,7 +72,7 @@ use core::{mem, ptr};
 // > here.
 //
 // See http://www.burtleburtle.net/bob/c/lookup3.c.
-pub struct Lookup3Hasher {
+pub(crate) struct Lookup3Hasher {
     pc: Wrapping<u32>, // primary initval / primary hash
     pb: Wrapping<u32>, // secondary initval / secondary hash
 }
@@ -213,7 +213,7 @@ fn offset_to_align<T>(ptr: *const T, align: usize) -> usize {
 }
 
 
-// copypaste from core::hash::sip 
+// Copypaste from core::hash::sip 
 
 /// Loads an integer of the desired type from a byte stream, in LE order. Uses
 /// `copy_nonoverlapping` to let the compiler generate the most efficient way
