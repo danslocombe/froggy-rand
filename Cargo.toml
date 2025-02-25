@@ -1,6 +1,6 @@
 [package]
 name = "froggy-rand"
-version = "0.2.2"
+version = "0.3.0"
 authors = ["Dan Slocombe"]
 description = "Random number generation without state for games"
 license = "MIT"
@@ -12,5 +12,3 @@ repository = "https://github.com/danslocombe/froggy-rand"
 edition = "2018"
 
 [dependencies]
-deterministic-hash = "1.0.1"
-hashers = "1.0.1"

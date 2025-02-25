@@ -82,6 +82,8 @@
 use core::hash::{Hash, Hasher};
 use core::num::Wrapping;
 
+mod hasher;
+
 #[derive(Debug, Copy, Clone)]
 pub struct FroggyRand {
     seed : u64,
@@ -96,7 +98,7 @@ fn split_mix_64(index : u64) -> u64 {
 
 #[inline]
 fn hash<T : Hash>(x : T) -> u64 {
-    let mut hasher = deterministic_hash::DeterministicHasher::new(hashers::jenkins::Lookup3Hasher::default());
+    let mut hasher = hasher::Lookup3Hasher::default();
     x.hash(&mut hasher);
     hasher.finish()
 }
@@ -126,13 +128,13 @@ impl FroggyRand {
     }
 
     /// Should be uniform in [0, 1]
-    pub fn gen_unit<T : Hash>(&self, x : T) -> f64 {
+    pub fn gen_unit<T : Hash>(&self, x : T) -> f32 {
         // Should be enough precision for a game
-        (self.gen(x) % 1_000_000) as f64 / 1_000_000.0
+        (self.gen(x) % 1_000_000) as f32 / 1_000_000.0
     }
 
     /// Should be uniform in [min, max]
-    pub fn gen_range<T : Hash>(&self, x : T, min : f64, max : f64) -> f64 {
+    pub fn gen_range<T : Hash>(&self, x : T, min : f32, max : f32) -> f32 {
         min + self.gen_unit(x) * (max - min)
     }
 
@@ -147,10 +149,10 @@ impl FroggyRand {
 
     /// I dont know what a statistic is
     /// Approx normal dist https://en.wikipedia.org/wiki/Irwin%E2%80%93Hall_distribution
-    pub fn gen_froggy<T : Hash>(&self, x : T, min : f64, max : f64, n : u32) -> f64 {
+    pub fn gen_froggy<T : Hash>(&self, x : T, min : f32, max : f32, n : u32) -> f32 {
         let mut sum = 0.;
-        let gen_min = min / n as f64;
-        let gen_max = max / n as f64;
+        let gen_min = min / n as f32;
+        let gen_max = max / n as f32;
 
         for i in 0..n {
             sum += self.gen_range((&x, i), gen_min, gen_max);
@@ -177,7 +179,17 @@ impl FroggyRand {
     pub fn gen_byte<T : Hash>(&self, x : T) -> u8 {
         (self.gen(x) % 255) as u8
     }
+
+    pub fn gen_perf(&self, seed: i32) -> u64 {
+        let index = (Wrapping(self.seed) + Wrapping(seed as u64)).0;
+        split_mix_64(index)
+    }
+
+    pub fn gen_unit_perf(&self, seed: i32) -> f32 {
+        (self.gen_perf(seed) % 1_000_000) as f32 / 1_000_000.0
+    }
 }
+
 
 #[cfg(test)]
 mod tests {
