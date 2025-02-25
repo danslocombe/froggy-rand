@@ -1,77 +1,101 @@
-// copypasted from hashers crate.
-
 use core::hash::Hasher;
 use core::num::Wrapping;
 use core::{mem, ptr};
 
-// ================================
-// lookup3
+// Copypaste from core::hash::sip 
 
-// Another Hasher from the inventor of SpookyHash. Fancy bit-mixing. *Very fancy.*
+/// Loads an integer of the desired type from a byte stream, in LE order. Uses
+/// `copy_nonoverlapping` to let the compiler generate the most efficient way
+/// to load it from a possibly unaligned address.
+///
+/// Safety: this performs unchecked indexing of `$buf` at
+/// `$i..$i+size_of::<$int_ty>()`, so that must be in-bounds.
+macro_rules! load_int_le {
+    ($buf:expr, $i:expr, $int_ty:ident) => {{
+        unsafe {
+            debug_assert!($i + mem::size_of::<$int_ty>() <= $buf.len());
+            let mut data = 0 as $int_ty;
+            ptr::copy_nonoverlapping(
+                $buf.as_ptr().add($i),
+                &mut data as *mut _ as *mut u8,
+                mem::size_of::<$int_ty>(),
+            );
+            data.to_le()
+        }
+    }};
+}
+
+// Copypaste from hashers crate.
+// https://github.com/tmmcguire/hashers/blob/a1d5b1d6154e2c742e670e40487ba51e7e547e0c/src/jenkins/mod.rs#L76
 //
-// From http://www.burtleburtle.net/bob/hash/doobs.html:
-//
-// > ...http://burtleburtle.net/bob/c/lookup3.c (2006) is about 2
-// > cycles/byte, works well on 32-bit platforms, and can produce a
-// > 32 or 64 bit hash.
-//
-// > A hash I wrote nine years later designed along the same lines
-// > as "My Hash", see http://burtleburtle.net/bob/c/lookup3.c.
-// > It takes 2n instructions per byte for mixing instead of 3n.
-// > When fitting bytes into registers (the other 3n instructions),
-// > it takes advantage of alignment when it can (a trick learned
-// > from Paul Hsieh's hash). It doesn't bother to reserve a byte
-// > for the length. That allows zero-length strings to require no
-// > mixing. More generally, the length that requires additional
-// > mixes is now 13-25-37 instead of 12-24-36.
-// >
-// > One theoretical insight was that the last mix doesn't need to
-// > do well in reverse (though it has to affect all output bits).
-// > And the middle mixing steps don't have to affect all output
-// > bits (affecting some 32 bits is enough), though it does have
-// > to do well in reverse. So it uses different mixes for those
-// > two cases. "My Hash" (lookup2.c) had a single mixing operation
-// > that had to satisfy both sets of requirements, which is why it
-// > was slower.
-// >
-// > On a Pentium 4 with gcc 3.4.?, Paul's hash was usually faster
-// > than lookup3.c. On a Pentium 4 with gcc 3.2.?, they were about
-// > the same speed. On a Pentium 4 with icc -O2, lookup3.c was a
-// > little faster than Paul's hash. I don't know how it would play
-// > out on other chips and other compilers. lookup3.c is slower
-// > than the additive hash pretty much forever, but it's faster
-// > than the rotating hash for keys longer than 5 bytes.
-// >
-// > lookup3.c does a much more thorough job of mixing than any of
-// > my previous hashes (lookup2.c, lookup.c, One-at-a-time). All
-// > my previous hashes did a more thorough job of mixing than Paul
-// > Hsieh's hash. Paul's hash does a good enough job of mixing for
-// > most practical purposes.
-// >
-// > The most evil set of keys I know of are sets of keys that are
-// > all the same length, with all bytes zero, except with a few
-// > bits set. This is tested by frog.c.. To be even more evil, I
-// > had my hashes return b and c instead of just c, yielding a
-// > 64-bit hash value. Both lookup.c and lookup2.c start seeing
-// > collisions after 253 frog.c keypairs. Paul Hsieh's hash sees
-// > collisions after 217 keypairs, even if we take two hashes
-// > with different seeds. lookup3.c is the only one of the batch
-// > that passes this test. It gets its first collision somewhere
-// > beyond 263 keypairs, which is exactly what you'd expect from a
-// > completely random mapping to 64-bit values.
-//
-// This structure implements hashlittle2:
-//
-// > You probably want to use hashlittle(). hashlittle() and
-// > hashbig() hash byte arrays. hashlittle() is is faster than
-// > hashbig() on little-endian machines. Intel and AMD are
-// > little-endian machines. On second thought, you probably want
-// > hashlittle2(), which is identical to hashlittle() except it
-// > returns two 32-bit hashes for the price of one. You could
-// > implement hashbig2() if you wanted but I haven't bothered
-// > here.
-//
-// See http://www.burtleburtle.net/bob/c/lookup3.c.
+/// ================================
+/// lookup3
+/// 
+/// Another Hasher from the inventor of SpookyHash. Fancy bit-mixing. *Very fancy.*
+///
+/// From http://www.burtleburtle.net/bob/hash/doobs.html:
+///
+/// > ...http://burtleburtle.net/bob/c/lookup3.c (2006) is about 2
+/// > cycles/byte, works well on 32-bit platforms, and can produce a
+/// > 32 or 64 bit hash.
+///
+/// > A hash I wrote nine years later designed along the same lines
+/// > as "My Hash", see http://burtleburtle.net/bob/c/lookup3.c.
+/// > It takes 2n instructions per byte for mixing instead of 3n.
+/// > When fitting bytes into registers (the other 3n instructions),
+/// > it takes advantage of alignment when it can (a trick learned
+/// > from Paul Hsieh's hash). It doesn't bother to reserve a byte
+/// > for the length. That allows zero-length strings to require no
+/// > mixing. More generally, the length that requires additional
+/// > mixes is now 13-25-37 instead of 12-24-36.
+/// >
+/// > One theoretical insight was that the last mix doesn't need to
+/// > do well in reverse (though it has to affect all output bits).
+/// > And the middle mixing steps don't have to affect all output
+/// > bits (affecting some 32 bits is enough), though it does have
+/// > to do well in reverse. So it uses different mixes for those
+/// > two cases. "My Hash" (lookup2.c) had a single mixing operation
+/// > that had to satisfy both sets of requirements, which is why it
+/// > was slower.
+/// >
+/// > On a Pentium 4 with gcc 3.4.?, Paul's hash was usually faster
+/// > than lookup3.c. On a Pentium 4 with gcc 3.2.?, they were about
+/// > the same speed. On a Pentium 4 with icc -O2, lookup3.c was a
+/// > little faster than Paul's hash. I don't know how it would play
+/// > out on other chips and other compilers. lookup3.c is slower
+/// > than the additive hash pretty much forever, but it's faster
+/// > than the rotating hash for keys longer than 5 bytes.
+/// >
+/// > lookup3.c does a much more thorough job of mixing than any of
+/// > my previous hashes (lookup2.c, lookup.c, One-at-a-time). All
+/// > my previous hashes did a more thorough job of mixing than Paul
+/// > Hsieh's hash. Paul's hash does a good enough job of mixing for
+/// > most practical purposes.
+/// >
+/// > The most evil set of keys I know of are sets of keys that are
+/// > all the same length, with all bytes zero, except with a few
+/// > bits set. This is tested by frog.c.. To be even more evil, I
+/// > had my hashes return b and c instead of just c, yielding a
+/// > 64-bit hash value. Both lookup.c and lookup2.c start seeing
+/// > collisions after 253 frog.c keypairs. Paul Hsieh's hash sees
+/// > collisions after 217 keypairs, even if we take two hashes
+/// > with different seeds. lookup3.c is the only one of the batch
+/// > that passes this test. It gets its first collision somewhere
+/// > beyond 263 keypairs, which is exactly what you'd expect from a
+/// > completely random mapping to 64-bit values.
+///
+/// This structure implements hashlittle2:
+///
+/// > You probably want to use hashlittle(). hashlittle() and
+/// > hashbig() hash byte arrays. hashlittle() is is faster than
+/// > hashbig() on little-endian machines. Intel and AMD are
+/// > little-endian machines. On second thought, you probably want
+/// > hashlittle2(), which is identical to hashlittle() except it
+/// > returns two 32-bit hashes for the price of one. You could
+/// > implement hashbig2() if you wanted but I haven't bothered
+/// > here.
+///
+/// See http://www.burtleburtle.net/bob/c/lookup3.c.
 pub(crate) struct Lookup3Hasher {
     pc: Wrapping<u32>, // primary initval / primary hash
     pb: Wrapping<u32>, // secondary initval / secondary hash
@@ -210,30 +234,6 @@ fn shift_add(s: &[u8]) -> Wrapping<u32> {
 #[inline]
 fn offset_to_align<T>(ptr: *const T, align: usize) -> usize {
     align - (ptr as usize & (align - 1))
-}
-
-
-// Copypaste from core::hash::sip 
-
-/// Loads an integer of the desired type from a byte stream, in LE order. Uses
-/// `copy_nonoverlapping` to let the compiler generate the most efficient way
-/// to load it from a possibly unaligned address.
-///
-/// Safety: this performs unchecked indexing of `$buf` at
-/// `$i..$i+size_of::<$int_ty>()`, so that must be in-bounds.
-macro_rules! load_int_le {
-    ($buf:expr, $i:expr, $int_ty:ident) => {{
-        unsafe {
-            debug_assert!($i + mem::size_of::<$int_ty>() <= $buf.len());
-            let mut data = 0 as $int_ty;
-            ptr::copy_nonoverlapping(
-                $buf.as_ptr().add($i),
-                &mut data as *mut _ as *mut u8,
-                mem::size_of::<$int_ty>(),
-            );
-            data.to_le()
-        }
-    }};
 }
 
 impl Hasher for Lookup3Hasher {

@@ -187,12 +187,14 @@ impl FroggyRand {
         (self.gen(x) % 255) as u8
     }
 
+    /// More performant gen() if the only control parameter you need is a single int.
     #[inline]
     pub fn gen_perf(&self, seed: i32) -> u64 {
         let index = (Wrapping(self.seed) + Wrapping(seed as u64)).0;
         split_mix_64(index)
     }
 
+    /// More performant gen_unit() if the only control parameter you need is a single int.
     #[inline]
     pub fn gen_unit_perf(&self, seed: i32) -> f32 {
         (self.gen_perf(seed) % 1_000_000) as f32 / 1_000_000.0
